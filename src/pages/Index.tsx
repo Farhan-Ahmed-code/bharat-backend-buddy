@@ -7,6 +7,7 @@ import { User as SupabaseUser } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 import { Gavel, Users, TrendingUp, Star, ArrowRight, Clock, IndianRupee, Shield, MapPin, Zap } from 'lucide-react';
 import Navbar from '@/components/layout/Navbar';
+import heroImage from '@/assets/hero-auction.jpg';
 
 const Index = () => {
   const [user, setUser] = useState<SupabaseUser | null>(null);
@@ -81,8 +82,12 @@ const Index = () => {
       <Navbar />
       
       {/* Hero Section */}
-      <section className="relative py-20 px-4 bg-gradient-hero overflow-hidden">
-        <div className="absolute inset-0 bg-black/20" />
+      <section className="relative py-20 px-4 overflow-hidden">
+        <div 
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: `url(${heroImage})` }}
+        />
+        <div className="absolute inset-0 bg-gradient-hero/80" />
         <div className="relative container mx-auto text-center text-white">
           <h1 className="text-4xl md:text-6xl font-bold mb-6">
             भारत का सबसे बड़ा
