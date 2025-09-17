@@ -237,7 +237,7 @@ const Index = () => {
       <section className="py-16 px-4 bg-card-elevated">
         <div className="container mx-auto">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold mb-4">Why Choose Bharat Auction?</h2>
+            <h2 className="text-3xl font-bold mb-4">Why Choose QuickBidder?</h2>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               Experience the most trusted and feature-rich auction platform designed for Indian buyers and sellers
             </p>
@@ -283,7 +283,7 @@ const Index = () => {
           <div className="container mx-auto text-center text-white">
             <h2 className="text-3xl font-bold mb-4">Ready to Start Your Auction Journey?</h2>
             <p className="text-xl mb-8 text-white/90 max-w-2xl mx-auto">
-              Join thousands of satisfied users who trust Bharat Auction for their buying and selling needs
+              Join thousands of satisfied users who trust QuickBidder for their buying and selling needs
             </p>
             <Button 
               size="lg" 
@@ -300,7 +300,7 @@ const Index = () => {
       {/* Footer */}
       <footer className="py-8 px-4 border-t bg-card">
         <div className="container mx-auto text-center text-muted-foreground">
-          <p>&copy; 2024 Bharat Auction House. Made with ❤️ for India.</p>
+          <p>&copy; 2024 QuickBidder. Made with ❤️ for India.</p>
         </div>
       </footer>
     </div>

@@ -34,9 +34,7 @@ interface Auction {
   current_price: number;
   end_time: string;
   created_at: string;
-  profiles?: {
-    full_name: string | null;
-  };
+  seller_full_name: string | null;
 }
 
 const AdminDashboard = () => {
@@ -135,38 +133,23 @@ const AdminDashboard = () => {
 
       setUsers(usersWithEmail);
 
-      // Fetch recent auctions with seller info
-      const { data: auctionsData } = await supabase
-        .from('auctions')
-        .select(`
-          id,
-          title,
-          status,
-          current_price,
-          end_time,
-          created_at,
-          seller_id
-        `)
+      // Fetch recent auctions with seller info (no N+1)
+      const { data: auctionsData } = await (supabase as any)
+        .from('auctions_with_seller')
+        .select('*')
         .order('created_at', { ascending: false })
         .limit(10);
 
-      // Get seller profiles separately
-      const auctionsWithSellers = await Promise.all(
-        (auctionsData || []).map(async (auction) => {
-          const { data: sellerProfile } = await supabase
-            .from('profiles')
-            .select('full_name')
-            .eq('user_id', auction.seller_id)
-            .single();
-          
-          return {
-            ...auction,
-            profiles: sellerProfile
-          };
-        })
-      );
-
-      setAuctions(auctionsWithSellers);
+      const normalized: Auction[] = (auctionsData || []).map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        status: row.status,
+        current_price: row.current_price,
+        end_time: row.end_time,
+        created_at: row.created_at,
+        seller_full_name: row.seller_full_name ?? null,
+      }));
+      setAuctions(normalized);
     } catch (error: any) {
       toast({
         title: "Error loading dashboard data",
@@ -363,7 +346,7 @@ const AdminDashboard = () => {
                         {auction.title}
                       </TableCell>
                       <TableCell>
-                        {auction.profiles?.full_name || 'Unknown'}
+                        {auction.seller_full_name || 'Unknown'}
                       </TableCell>
                       <TableCell>{formatPrice(auction.current_price)}</TableCell>
                       <TableCell>{getStatusBadge(auction.status)}</TableCell>

@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 import { Clock, IndianRupee, Users, Eye } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
@@ -17,51 +18,54 @@ interface Auction {
   end_time: string;
   status: string;
   image_url: string | null;
-  categories?: {
-    name: string;
-  };
+  category_name: string | null;
   bid_count?: number;
 }
 
 const AuctionGrid = () => {
   const [auctions, setAuctions] = useState<Auction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [category, setCategory] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
     fetchAuctions();
-  }, []);
+  }, [search, category]);
 
   const fetchAuctions = async () => {
     try {
-      const { data, error } = await supabase
-        .from('auctions')
-        .select(`
-          *,
-          categories (
-            name
-          )
-        `)
+      let query = (supabase as any)
+        .from('auctions_with_bid_count')
+        .select('*')
         .eq('status', 'active')
-        .gte('end_time', new Date().toISOString())
-        .order('created_at', { ascending: false });
+        .gte('end_time', new Date().toISOString());
+
+      if (search) {
+        query = query.ilike('title', `%${search}%`);
+      }
+      if (category) {
+        query = query.eq('category_name', category);
+      }
+
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
 
-      // Get bid counts for each auction
-      const auctionsWithBids = await Promise.all(
-        (data || []).map(async (auction) => {
-          const { count } = await supabase
-            .from('bids')
-            .select('*', { count: 'exact' })
-            .eq('auction_id', auction.id);
-          
-          return { ...auction, bid_count: count || 0 };
-        })
-      );
-
-      setAuctions(auctionsWithBids);
+      const normalized: Auction[] = (data || []).map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        description: row.description ?? null,
+        starting_price: row.starting_price,
+        current_price: row.current_price,
+        end_time: row.end_time,
+        status: row.status,
+        image_url: row.image_url ?? null,
+        category_name: row.category_name ?? null,
+        bid_count: row.bid_count ?? 0,
+      }));
+      setAuctions(normalized);
     } catch (error: any) {
       toast({
         title: "Error loading auctions",
@@ -124,16 +128,16 @@ const AuctionGrid = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Live Auctions</h1>
-          <p className="text-muted-foreground">
-            Discover unique items from across India
-          </p>
+          <p className="text-muted-foreground">Discover unique items from across India</p>
         </div>
-        <Button onClick={() => navigate('/create-auction')}>
-          Create Auction
-        </Button>
+        <div className="flex items-center gap-2">
+          <Input placeholder="Search title" value={search} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)} />
+          <Input placeholder="Category" value={category ?? ''} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCategory(e.target.value || null)} />
+          <Button onClick={() => navigate('/create-auction')}>Create Auction</Button>
+        </div>
       </div>
 
       {auctions.length === 0 ? (
@@ -175,9 +179,9 @@ const AuctionGrid = () => {
                   </Badge>
                 )}
                 
-                {auction.categories && (
+                {auction.category_name && (
                   <Badge className="absolute top-2 left-2 bg-secondary text-secondary-foreground">
-                    {auction.categories.name}
+                    {auction.category_name}
                   </Badge>
                 )}
               </div>

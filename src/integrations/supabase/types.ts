@@ -195,6 +195,37 @@ export type Database = {
         }
         Relationships: []
       }
+      ,
+      payments: {
+        Row: {
+          id: string
+          auction_id: string
+          winner_id: string | null
+          amount: number
+          status: string
+          provider_order_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          auction_id: string
+          winner_id?: string | null
+          amount: number
+          status?: string
+          provider_order_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          auction_id?: string
+          winner_id?: string | null
+          amount?: number
+          status?: string
+          provider_order_id?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

@@ -70,7 +70,7 @@ const Navbar = () => {
     navigate('/auth');
   };
 
-  const getInitials = (name: string | null) => {
+  const getInitials = (name: string | null | undefined) => {
     if (!name) return 'U';
     return name.split(' ').map(n => n[0]).join('').toUpperCase();
   };
@@ -87,7 +87,7 @@ const Navbar = () => {
               <Gavel className="h-5 w-5 text-primary-foreground" />
             </div>
             <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              भारत Auction
+              QuickBidder
             </span>
           </div>
           
