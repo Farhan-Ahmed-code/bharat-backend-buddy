@@ -5,7 +5,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Users, Gavel, IndianRupee, TrendingUp, Eye, Edit, Trash2 } from 'lucide-react';
+import { Users, Gavel, IndianRupee, TrendingUp, Eye, Edit, Trash2, BarChart3 } from 'lucide-react';
+import AnalyticsDashboard from './AnalyticsDashboard';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -13,6 +14,7 @@ interface DashboardStats {
   totalUsers: number;
   totalAuctions: number;
   activeAuctions: number;
+  pendingAuctions: number;
   totalRevenue: number;
 }
 
@@ -37,16 +39,31 @@ interface Auction {
   seller_full_name: string | null;
 }
 
+interface PendingAuction {
+  id: string;
+  title: string;
+  description: string | null;
+  starting_price: number;
+  current_price: number;
+  created_at: string;
+  seller_id: string;
+  seller_full_name: string | null;
+  seller_email: string | null;
+}
+
 const AdminDashboard = () => {
   const [stats, setStats] = useState<DashboardStats>({
     totalUsers: 0,
     totalAuctions: 0,
     activeAuctions: 0,
-    totalRevenue: 0
+    totalRevenue: 0,
+    pendingApprovals: 0
   });
   const [users, setUsers] = useState<User[]>([]);
   const [auctions, setAuctions] = useState<Auction[]>([]);
+  const [pendingAuctions, setPendingAuctions] = useState<PendingAuction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [processingApproval, setProcessingApproval] = useState(false);
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -88,11 +105,13 @@ const AdminDashboard = () => {
         { count: userCount },
         { count: auctionCount },
         { count: activeAuctionCount },
+        { count: pendingCount },
         { data: revenueData }
       ] = await Promise.all([
         supabase.from('profiles').select('*', { count: 'exact' }),
         supabase.from('auctions').select('*', { count: 'exact' }),
         supabase.from('auctions').select('*', { count: 'exact' }).eq('status', 'active'),
+        supabase.from('auctions').select('*', { count: 'exact' }).eq('approval_status', 'pending'),
         supabase.from('auctions').select('current_price').eq('status', 'completed')
       ]);
 
@@ -102,6 +121,7 @@ const AdminDashboard = () => {
         totalUsers: userCount || 0,
         totalAuctions: auctionCount || 0,
         activeAuctions: activeAuctionCount || 0,
+        pendingAuctions: pendingCount || 0,
         totalRevenue
       });
 
@@ -150,6 +170,38 @@ const AdminDashboard = () => {
         seller_full_name: row.seller_full_name ?? null,
       }));
       setAuctions(normalized);
+
+      // Fetch pending auctions for approval
+      const { data: pendingData } = await supabase
+        .from('auctions')
+        .select(`
+          id,
+          title,
+          description,
+          starting_price,
+          current_price,
+          created_at,
+          seller_id,
+          profiles:seller_id (
+            full_name,
+            email
+          )
+        `)
+        .eq('approval_status', 'pending')
+        .order('created_at', { ascending: false });
+
+      const normalizedPending: PendingAuction[] = (pendingData || []).map((row: any) => ({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        starting_price: row.starting_price,
+        current_price: row.current_price,
+        created_at: row.created_at,
+        seller_id: row.seller_id,
+        seller_full_name: row.profiles?.full_name ?? null,
+        seller_email: row.profiles?.email ?? null,
+      }));
+      setPendingAuctions(normalizedPending);
     } catch (error: any) {
       toast({
         title: "Error loading dashboard data",
@@ -171,6 +223,115 @@ const AdminDashboard = () => {
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-IN');
+  };
+
+  const handleApproveAuction = async (auctionId: string) => {
+    try {
+      setProcessingApproval(true);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Update auction status to approved
+      const { error: updateError } = await supabase
+        .from('auctions')
+        .update({
+          approval_status: 'approved',
+          approved_at: new Date().toISOString(),
+          approved_by: user.id
+        })
+        .eq('id', auctionId);
+
+      if (updateError) throw updateError;
+
+      // Log the approval action
+      await supabase
+        .from('admin_audit_log')
+        .insert({
+          auction_id: auctionId,
+          admin_id: user.id,
+          action: 'approved',
+          details: 'Auction approved and made live'
+        });
+
+      // Refresh the data
+      await fetchDashboardData();
+
+      toast({
+        title: "Auction Approved",
+        description: "The auction is now live and visible to users.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error approving auction",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingApproval(false);
+    }
+  };
+
+  const handleRejectAuction = async (auctionId: string) => {
+    try {
+      setProcessingApproval(true);
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: "Authentication Error",
+          description: "Please log in again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Update auction status to rejected
+      const { error: updateError } = await supabase
+        .from('auctions')
+        .update({
+          approval_status: 'rejected',
+          approved_at: new Date().toISOString(),
+          approved_by: user.id,
+          rejection_reason: 'Rejected by admin'
+        })
+        .eq('id', auctionId);
+
+      if (updateError) throw updateError;
+
+      // Log the rejection action
+      await supabase
+        .from('admin_audit_log')
+        .insert({
+          auction_id: auctionId,
+          admin_id: user.id,
+          action: 'rejected',
+          details: 'Auction rejected by admin'
+        });
+
+      // Refresh the data
+      await fetchDashboardData();
+
+      toast({
+        title: "Auction Rejected",
+        description: "The auction has been rejected and removed from pending list.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error rejecting auction",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingApproval(false);
+    }
   };
 
   const getStatusBadge = (status: string) => {
@@ -214,7 +375,7 @@ const AdminDashboard = () => {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Users</CardTitle>
@@ -253,7 +414,20 @@ const AdminDashboard = () => {
             </p>
           </CardContent>
         </Card>
-        
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Approvals</CardTitle>
+            <Eye className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.pendingAuctions}</div>
+            <p className="text-xs text-muted-foreground">
+              Awaiting admin review
+            </p>
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
@@ -273,6 +447,8 @@ const AdminDashboard = () => {
         <TabsList>
           <TabsTrigger value="users">Recent Users</TabsTrigger>
           <TabsTrigger value="auctions">Recent Auctions</TabsTrigger>
+          <TabsTrigger value="pending">Pending Approvals</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
         
         <TabsContent value="users" className="space-y-4">
@@ -374,6 +550,80 @@ const AdminDashboard = () => {
               </Table>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="pending" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Pending Auction Approvals</CardTitle>
+              <CardDescription>
+                Review and approve auctions before they go live
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Auction Title</TableHead>
+                    <TableHead>Seller</TableHead>
+                    <TableHead>Starting Price</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {pendingAuctions.map((auction) => (
+                    <TableRow key={auction.id}>
+                      <TableCell className="font-medium max-w-xs truncate">
+                        {auction.title}
+                      </TableCell>
+                      <TableCell>
+                        {auction.seller_full_name || auction.seller_email || 'Unknown'}
+                      </TableCell>
+                      <TableCell>{formatPrice(auction.starting_price)}</TableCell>
+                      <TableCell>{formatDate(auction.created_at)}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center space-x-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(`/auction/${auction.id}`)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleApproveAuction(auction.id)}
+                            disabled={processingApproval}
+                          >
+                            Approve
+                          </Button>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleRejectAuction(auction.id)}
+                            disabled={processingApproval}
+                          >
+                            Reject
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {pendingAuctions.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No pending auctions to review
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="analytics" className="space-y-4">
+          <AnalyticsDashboard />
         </TabsContent>
       </Tabs>
     </div>

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Badge } from '@/components/ui/badge';
-import { Gavel, User, Settings, LogOut, Shield, Plus } from 'lucide-react';
+import { Gavel, User, Settings, LogOut, Shield, Plus, Heart } from 'lucide-react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { useNavigate } from 'react-router-dom';
 
@@ -151,6 +151,10 @@ const Navbar = () => {
                   <DropdownMenuItem onClick={() => navigate('/my-auctions')}>
                     <Gavel className="mr-2 h-4 w-4" />
                     My Auctions
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/watchlist')}>
+                    <Heart className="mr-2 h-4 w-4" />
+                    My Watchlist
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate('/settings')}>
                     <Settings className="mr-2 h-4 w-4" />

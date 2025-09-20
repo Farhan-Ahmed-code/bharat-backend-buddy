@@ -34,7 +34,7 @@ serve(async (req) => {
     const { data: created, error: createErr } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: false,
+      email_confirm: true, // mark email as confirmed to bypass verification
       user_metadata: { full_name: (profile as any)?.full_name ?? null },
     });
     if (createErr || !created.user) return Response.json({ error: createErr?.message || "user create failed" }, { status: 400, headers: corsHeaders });

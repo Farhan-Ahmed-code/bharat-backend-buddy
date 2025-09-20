@@ -60,61 +60,50 @@ const AuthForm = () => {
     const handleSignUp = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
-
-        // Step 1: Create the user in Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-            email,
-            password,
-            // We have removed the emailRedirectTo option to respect your dashboard setting
-        });
-
-        if (authError) {
-            toast({
-                title: "Error creating account",
-                description: authError.message,
-                variant: "destructive",
-            });
-            setLoading(false);
-            return; // Stop if user creation fails
-        }
-
-        if (!authData.user) {
-            toast({
-                title: "Error creating account",
-                description: "Could not create user. Please try again.",
-                variant: "destructive",
-            });
-            setLoading(false);
-            return;
-        }
-
-        // Step 2: If user creation is successful, insert their profile data
-        const { error: profileError } = await supabase
-            .from('profiles')
-            .insert({
-                user_id: authData.user.id,
-                full_name: profileData.full_name,
-                phone: profileData.phone,
-                address: profileData.address,
-                city: profileData.city,
-                state: profileData.state,
-                pincode: profileData.pincode
+        try {
+            // Create user via Supabase Edge Function (skips email verification)
+            const { error } = await supabase.functions.invoke('handle_new_user_signup', {
+                body: {
+                    email,
+                    password,
+                    profile: {
+                        full_name: profileData.full_name,
+                        phone: profileData.phone,
+                        address: profileData.address,
+                        city: profileData.city,
+                        state: profileData.state,
+                        pincode: profileData.pincode,
+                    }
+                }
             });
 
-        if (profileError) {
-            toast({
-                title: "Account created but profile error",
-                description: `Your account was created, but we couldn't save your profile details. Please update them manually. Error: ${profileError.message}`,
-                variant: "destructive"
+            if (error) {
+                throw new Error(error.message || 'Failed to create account');
+            }
+
+            // Automatically sign the user in
+            const { error: signInError } = await supabase.auth.signInWithPassword({
+                email,
+                password,
             });
-        } else {
+            if (signInError) {
+                throw new Error(signInError.message);
+            }
+
             toast({
                 title: "Success!",
-                description: "Your account has been created successfully.",
+                description: "Your account has been created and you are now signed in.",
             });
+        } catch (err: unknown) {
+            const message = err instanceof Error ? err.message : 'An unexpected error occurred';
+            toast({
+                title: "Error creating account",
+                description: message,
+                variant: "destructive",
+            });
+        } finally {
+            setLoading(false);
         }
-
-        setLoading(false);
     };
 
     return (

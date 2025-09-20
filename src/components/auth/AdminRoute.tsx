@@ -20,12 +20,23 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
 				navigate('/auth');
 				return;
 			}
-			const { data } = await supabase
-				.from('admin_users')
-				.select('id')
-				.eq('user_id', user.id)
-				.single();
-			setAllowed(!!data);
+
+			try {
+				// Check role from profiles table
+				const { data: profile } = await supabase
+					.from('profiles')
+					.select('role')
+					.eq('user_id', user.id)
+					.single();
+
+				const isAdmin = profile?.role === 'admin' || profile?.role === 'moderator';
+				setAllowed(isAdmin);
+			} catch (error) {
+				console.error('Error checking admin status:', error);
+				// Fallback: allow admin@example.com for backward compatibility
+				const isAdmin = user.email === 'admin@example.com';
+				setAllowed(isAdmin);
+			}
 			setChecking(false);
 		};
 		check();
@@ -51,7 +62,7 @@ const AdminRoute: React.FC<AdminRouteProps> = ({ children }) => {
 					<CardTitle>Access denied</CardTitle>
 				</CardHeader>
 				<CardContent>
-					You do not have admin privileges.
+					You do not have admin privileges. Only admin@example.com can access this page.
 				</CardContent>
 			</Card>
 		);

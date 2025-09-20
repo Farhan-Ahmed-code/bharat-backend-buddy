@@ -40,6 +40,9 @@ export type Database = {
       }
       auctions: {
         Row: {
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
           category_id: string | null
           created_at: string
           current_price: number
@@ -47,6 +50,7 @@ export type Database = {
           end_time: string
           id: string
           image_url: string | null
+          rejection_reason: string | null
           reserve_price: number | null
           seller_id: string
           start_time: string
@@ -57,6 +61,9 @@ export type Database = {
           winner_id: string | null
         }
         Insert: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           category_id?: string | null
           created_at?: string
           current_price?: number
@@ -64,6 +71,7 @@ export type Database = {
           end_time: string
           id?: string
           image_url?: string | null
+          rejection_reason?: string | null
           reserve_price?: number | null
           seller_id: string
           start_time?: string
@@ -74,6 +82,9 @@ export type Database = {
           winner_id?: string | null
         }
         Update: {
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
           category_id?: string | null
           created_at?: string
           current_price?: number
@@ -81,6 +92,7 @@ export type Database = {
           end_time?: string
           id?: string
           image_url?: string | null
+          rejection_reason?: string | null
           reserve_price?: number | null
           seller_id?: string
           start_time?: string
@@ -195,7 +207,119 @@ export type Database = {
         }
         Relationships: []
       }
-      ,
+      shipments: {
+        Row: {
+          auction_id: string
+          carrier: string | null
+          created_at: string
+          id: string
+          seller_id: string
+          shipping_address: string | null
+          status: string
+          tracking_number: string | null
+          updated_at: string
+          winner_id: string
+        }
+        Insert: {
+          auction_id: string
+          carrier?: string | null
+          created_at?: string
+          id?: string
+          seller_id: string
+          shipping_address?: string | null
+          status?: string
+          tracking_number?: string | null
+          updated_at?: string
+          winner_id: string
+        }
+        Update: {
+          auction_id?: string
+          carrier?: string | null
+          created_at?: string
+          id?: string
+          seller_id?: string
+          shipping_address?: string | null
+          status?: string
+          tracking_number?: string | null
+          updated_at?: string
+          winner_id?: string
+        }
+        Relationships: []
+      }
+      watchlist: {
+        Row: {
+          auction_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          auction_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          auction_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "watchlist_auction_id_fkey"
+            columns: ["auction_id"]
+            isOneToOne: false
+            referencedRelation: "auctions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "watchlist_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      admin_audit_log: {
+        Row: {
+          id: string
+          admin_id: string
+          action_type: string
+          resource_type: string
+          resource_id: string
+          details: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          admin_id: string
+          action_type: string
+          resource_type: string
+          resource_id: string
+          details?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          admin_id?: string
+          action_type?: string
+          resource_type?: string
+          resource_id?: string
+          details?: Json | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_audit_log_admin_id_fkey"
+            columns: ["admin_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
       payments: {
         Row: {
           id: string

@@ -87,10 +87,10 @@ const Index = () => {
           className="absolute inset-0 bg-cover bg-center"
           style={{ backgroundImage: `url(${heroImage})` }}
         />
-        <div className="absolute inset-0 bg-gradient-hero/80" />
+        <div className="absolute inset-0 bg-black/60" />
         <div className="relative container mx-auto text-center text-white">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            भारत का सबसे बड़ा
+          <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+            <span lang="hi">भारत का सबसे बड़ा</span>
             <br />
             <span className="text-yellow-400">Auction Platform</span>
           </h1>

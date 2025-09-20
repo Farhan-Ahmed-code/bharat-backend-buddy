@@ -17,6 +17,7 @@ interface Auction {
   current_price: number;
   end_time: string;
   status: string;
+  approval_status: string;
   image_url: string | null;
   category_name: string | null;
   bid_count?: number;
@@ -40,6 +41,7 @@ const AuctionGrid = () => {
         .from('auctions_with_bid_count')
         .select('*')
         .eq('status', 'active')
+        .eq('approval_status', 'approved') // Only show approved auctions
         .gte('end_time', new Date().toISOString());
 
       if (search) {
